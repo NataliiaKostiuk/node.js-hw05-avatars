@@ -3,6 +3,13 @@ import { controllerWrapper } from "../decorators/index.js";
 import User from "../models/user.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import gravatar from 'gravatar';
+import fs from "fs/promises";
+import path from "path";
+import jimp from "jimp"
+
+const avatarsPath = path.resolve("public", "avatars");
+
 
 const {JWT_SECRET} = process.env;
 
@@ -13,11 +20,13 @@ const register = async (req, res) => {
         throw HttpError(409, "Email already in use");
     }
     const hashPassword = await bcrypt.hash(password, 10);
-    const newUser = await User.create({...req.body, password: hashPassword});
+    const avaratURL = gravatar.url(email)
+    const newUser = await User.create({...req.body, password: hashPassword, avaratURL});
     res.status(201).json({
-		user: {
+        user: {
             email: newUser.email,
-             subscription: newUser.subscription,
+            subscription: newUser.subscription,
+             avaratURL ,
 		},
 	});
 } 
@@ -68,10 +77,40 @@ const logout = async(req, res)=> {
     })
 }
 
+
+const getAvatar = async (req, res) => {
+  console.log(req.body);
+  console.log(req.file);
+  // const { path: tempUpload, originalname } = req.file;
+   const {path: oldPath, filename} = req.file;
+  const { _id: id } = req.user;
+  const imageName = `${id}_${filename}`;
+
+  try {
+    const resultUpload = path.join(avatarsPath, imageName);
+    await fs.rename(oldPath, resultUpload);
+    const avatarURL = path.join("public", "avatars", imageName);
+
+    jimp.read(avatarURL, (error, imageName) => {
+      if (error) throw error;
+      imageName.resize(250, 250).write(avatarURL);
+    });
+
+    await User.findByIdAndUpdate(id, { avatarURL });
+    res.json({
+      avatarURL,
+    });
+  } catch (error) {
+    await fs.unlink(oldPath);
+    throw error;
+  }
+};
+
 export default {
     register: controllerWrapper(register),
     login: controllerWrapper(login),
     getCurrent: controllerWrapper(getCurrent),
-    logout:controllerWrapper(logout),
+    logout: controllerWrapper(logout),
+    getAvatar: controllerWrapper(getAvatar),
     
 }

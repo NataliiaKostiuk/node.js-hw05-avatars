@@ -2,7 +2,7 @@ import express from "express";
 
 import usersControllers from '../../controllers/usersControllers.js';
 
-import { isEmptyBody, authenticate} from "../../middlewares/index.js";
+import { isEmptyBody, authenticate, upload} from "../../middlewares/index.js";
 
 import { userRegisterSchema } from "../../models/user.js";
 
@@ -17,6 +17,8 @@ authRouter.post("/login", isEmptyBody, validateBody(userRegisterSchema), usersCo
  
 authRouter.get("/current", authenticate, usersControllers.getCurrent);
 
-authRouter.post("/logout",authenticate, usersControllers.logout);
+authRouter.post("/logout", authenticate, usersControllers.logout);
+
+authRouter.patch("/avatars", authenticate, upload.single('avatar'), usersControllers.getAvatar)
 
 export default authRouter;
