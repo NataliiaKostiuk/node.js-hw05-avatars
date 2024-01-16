@@ -78,17 +78,20 @@ const logout = async(req, res)=> {
 }
 
 
-const getAvatar = async (req, res) => {
-  console.log(req.body);
-  console.log(req.file);
-  // const { path: tempUpload, originalname } = req.file;
-   const {path: oldPath, filename} = req.file;
+const getAvatar =async (req, res) => {
+
+  if (!req.file) {
+		throw HttpError(400, 'Error loading avatar');
+	}
+
+  const { path: tempUpload, originalname } = req.file;
+
   const { _id: id } = req.user;
-  const imageName = `${id}_${filename}`;
+  const imageName = `${id}_${originalname}`;
 
   try {
     const resultUpload = path.join(avatarsPath, imageName);
-    await fs.rename(oldPath, resultUpload);
+    await fs.rename(tempUpload, resultUpload);
     const avatarURL = path.join("public", "avatars", imageName);
 
     jimp.read(avatarURL, (error, imageName) => {
@@ -101,7 +104,7 @@ const getAvatar = async (req, res) => {
       avatarURL,
     });
   } catch (error) {
-    await fs.unlink(oldPath);
+    await fs.unlink(tempUpload);
     throw error;
   }
 };
